@@ -3,16 +3,28 @@ Client pour interagir avec DeepSeek-V3 via gRPC.
 """
 
 import os
-import grpc
+try:
+    import grpc
+except Exception:  # pragma: no cover - optional dependency for tests
+    grpc = None
 import asyncio
-import numpy as np
+try:
+    import numpy as np
+except Exception:  # pragma: no cover - optional dependency for tests
+    np = None
 from typing import Dict, List, Optional, Tuple, Any
 import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
 import yaml
-import torch
+try:
+    import torch
+except Exception:  # pragma: no cover - optional dependency for tests
+    torch = None
 from datetime import datetime
-import pandas as pd
+try:
+    import pandas as pd
+except Exception:  # pragma: no cover - optional dependency for tests
+    pd = None
 
 # Import des protobuf générés (à créer)
 # from app.proto import deepseek_pb2, deepseek_pb2_grpc
@@ -36,7 +48,9 @@ class DeepSeekClient:
         
         # Configuration du modèle
         self.model_path = self.config.get("model_path", "/models/deepseek-v3")
-        self.device = self.config.get("device", "cuda" if torch.cuda.is_available() else "cpu")
+        # Torch is optional during testing; fallback to CPU if unavailable
+        cuda_available = bool(torch and getattr(torch, "cuda", None) and torch.cuda.is_available())
+        self.device = self.config.get("device", "cuda" if cuda_available else "cpu")
         self.batch_size = self.config.get("batch_size", 32)
         self.max_sequence_length = self.config.get("max_sequence_length", 2048)
         
@@ -125,7 +139,7 @@ class DeepSeekClient:
             logger.error(f"Failed to load model: {e}")
             raise
     
-    def normalize_timeseries(self, data: pd.DataFrame) -> np.ndarray:
+    def normalize_timeseries(self, data: 'pd.DataFrame') -> 'np.ndarray':
         """Normalise les séries temporelles pour l'entrée du modèle.
         
         Args:
@@ -186,7 +200,7 @@ class DeepSeekClient:
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     async def predict_signals(
         self, 
-        timeseries_data: Dict[str, pd.DataFrame],
+        timeseries_data: Dict[str, 'pd.DataFrame'],
         market_context: Optional[Dict] = None
     ) -> List[Dict]:
         """Génère des signaux de trading à partir des données.
@@ -236,7 +250,7 @@ class DeepSeekClient:
     
     async def _run_prediction(
         self, 
-        features: np.ndarray,
+        features: 'np.ndarray',
         timeframe: str,
         market_context: Optional[Dict] = None
     ) -> Dict:
@@ -316,7 +330,7 @@ class DeepSeekClient:
                 "features": {}
             }
     
-    def _create_signal(self, prediction: Dict, data: pd.DataFrame, timeframe: str) -> Optional[Dict]:
+    def _create_signal(self, prediction: Dict, data: 'pd.DataFrame', timeframe: str) -> Optional[Dict]:
         """Crée un signal structuré à partir de la prédiction."""
         try:
             if prediction['signal_type'] == "HOLD":
@@ -357,7 +371,7 @@ class DeepSeekClient:
             logger.error(f"Error creating signal: {e}")
             return None
     
-    def _generate_reasoning(self, prediction: Dict, data: pd.DataFrame) -> str:
+    def _generate_reasoning(self, prediction: Dict, data: 'pd.DataFrame') -> str:
         """Génère une explication textuelle du signal."""
         features = prediction['features']
         signal = prediction['signal_type']
@@ -422,3 +436,33 @@ class DeepSeekClient:
             logger.info("DeepSeek client closed")
         except Exception as e:
             logger.error(f"Error closing client: {e}")
+
+    async def chat(self, prompt: str, context: Optional[str] = None) -> str:
+        """Génère une réponse textuelle à partir du modèle DeepSeek.
+
+        Cette implémentation est simplifiée et sert de démonstration. Elle
+        combine le message utilisateur avec un contexte optionnel (par exemple
+        les dernières news) avant de l'envoyer au modèle. La réponse retournée
+        est simulée tant que l'intégration gRPC complète n'est pas disponible.
+
+        Args:
+            prompt: message de l'utilisateur
+            context: informations de contexte supplémentaires
+
+        Returns:
+            Réponse générée par le modèle
+        """
+        try:
+            if not self.model_loaded:
+                await self.connect()
+
+            full_prompt = prompt
+            if context:
+                full_prompt = f"{context}\n\nUtilisateur: {prompt}"
+
+            # TODO: intégrer l'appel réel au modèle DeepSeek
+            return f"Réponse DeepSeek: {full_prompt[:200]}"
+
+        except Exception as e:
+            logger.error(f"Error during chat: {e}")
+            return "Erreur lors de la génération de la réponse"

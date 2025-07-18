@@ -7,7 +7,10 @@ from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import NullPool
 import structlog
-from app.models.signals import Base
+from sqlalchemy.orm import declarative_base
+
+# Declarative base for SQLAlchemy models
+Base = declarative_base()
 
 logger = structlog.get_logger()
 

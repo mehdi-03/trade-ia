@@ -395,3 +395,4 @@ async def websocket_stream(websocket):
         logger.error(f"Erreur WebSocket: {e}")
     finally:
         await websocket.close()
+
