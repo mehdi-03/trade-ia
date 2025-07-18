@@ -94,7 +94,19 @@ class Signal(Base):
     # Méta
     model_version = Column(String(50))
     model_confidence_scores = Column(JSON)
-    metadata = Column(JSON)
+    meta_info = Column(JSON)
+
+    def __init__(self, **kwargs):
+        if 'confidence_score' in kwargs and 'confidence' not in kwargs:
+            kwargs['confidence'] = kwargs.pop('confidence_score')
+        if 'timestamp' in kwargs and 'created_at' not in kwargs:
+            kwargs['created_at'] = kwargs.pop('timestamp')
+        super().__init__(**kwargs)
+
+    @property
+    def timestamp(self) -> datetime:
+        """Compatibilité pour les tests."""
+        return self.created_at
 
 
 # Modèles Pydantic pour l'API

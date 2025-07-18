@@ -10,7 +10,16 @@ from typing import Dict, List, Optional, Tuple, Any
 import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
 import yaml
-import torch
+try:
+    import torch
+except ImportError:  # pragma: no cover - optional dependency
+    class _DummyTorch:
+        class cuda:
+            @staticmethod
+            def is_available() -> bool:
+                return False
+
+    torch = _DummyTorch()
 from datetime import datetime
 import pandas as pd
 
