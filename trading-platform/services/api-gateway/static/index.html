@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DeepSeek Chat</title>
+    <title>DeepSeek Trading Assistant</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 2em; }
         #chat { max-width: 600px; }
@@ -13,13 +13,22 @@
     </style>
 </head>
 <body>
-<h1>DeepSeek Chat</h1>
-<div id="chat">
+<h1>DeepSeek Trading Assistant</h1>
+
+<section id="chat">
+    <h2>Chat</h2>
     <input id="token" type="text" placeholder="JWT token">
     <textarea id="message" placeholder="Votre message"></textarea>
     <button onclick="sendChat()">Envoyer</button>
     <pre id="response"></pre>
-</div>
+</section>
+
+<section id="market">
+    <h2>Données de marché</h2>
+    <input id="symbol" type="text" placeholder="Ticker (ex: AAPL)">
+    <button onclick="getMarketData()">Récupérer</button>
+    <pre id="marketData"></pre>
+</section>
 <script>
 async function sendChat() {
     const message = document.getElementById('message').value;
@@ -36,6 +45,26 @@ async function sendChat() {
     if (resp.ok) {
         const data = await resp.json();
         out.textContent = data.response;
+    } else {
+        out.textContent = 'Erreur: ' + resp.status;
+    }
+}
+
+async function getMarketData() {
+    const symbol = document.getElementById('symbol').value;
+    const token = document.getElementById('token').value;
+    if (!symbol) {
+        return;
+    }
+    const resp = await fetch(`/market-data/${symbol}`, {
+        headers: {
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+        }
+    });
+    const out = document.getElementById('marketData');
+    if (resp.ok) {
+        const data = await resp.json();
+        out.textContent = JSON.stringify(data, null, 2);
     } else {
         out.textContent = 'Erreur: ' + resp.status;
     }
