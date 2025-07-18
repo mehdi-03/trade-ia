@@ -593,5 +593,5 @@ class IAEngine:
             
         if self.message_queue:
             await self.message_queue.close()
-            
+
         logger.info("Moteur IA arrêté")
