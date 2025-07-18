@@ -1,0 +1,85 @@
+# Configuration DeepSeek V3
+model_path: "/models/deepseek-v3"
+device: "cuda"  # ou "cpu" si pas de GPU
+batch_size: 32
+max_sequence_length: 2048
+
+# Serveur gRPC (pour déploiement séparé)
+grpc_server: "localhost:50051"
+
+# Seuils de décision
+thresholds:
+  confidence: 0.7  # Confiance minimale pour générer un signal
+  strong_buy: 0.85
+  buy: 0.65
+  sell: -0.65
+  strong_sell: -0.85
+
+# Features utilisées
+features:
+  technical_indicators:
+    - rsi
+    - macd
+    - bollinger_bands
+    - sma
+    - ema
+    - atr
+    - adx
+    - stochastic
+    - obv
+    - volume_profile
+  
+  timeframes:
+    - 1m
+    - 5m
+    - 15m
+    - 1h
+    - 4h
+    - 1d
+  
+  lookback_periods:
+    1m: 1440    # 24 heures
+    5m: 288     # 24 heures
+    15m: 96     # 24 heures
+    1h: 168     # 7 jours
+    4h: 168     # 28 jours
+    1d: 365     # 1 an
+
+# Paramètres d'apprentissage
+training:
+  learning_rate: 0.0001
+  epochs: 100
+  validation_split: 0.2
+  early_stopping_patience: 10
+
+# Poids des différents facteurs dans la décision
+weights:
+  technical_analysis: 0.5
+  sentiment_analysis: 0.2
+  market_context: 0.2
+  volume_analysis: 0.1
+
+# Risk management par défaut
+risk_management:
+  max_position_size: 0.02  # 2% du capital
+  max_risk_per_trade: 0.01  # 1% du capital
+  stop_loss_atr_multiplier: 2.0
+  take_profit_atr_multiplier: 3.0
+  trailing_stop_enabled: true
+  trailing_stop_activation: 0.02  # 2% de profit
+  trailing_stop_distance: 0.01  # 1%
+
+# Filtres de marché
+market_filters:
+  min_volume_usd: 1000000  # Volume minimum en USD
+  min_volatility: 0.005  # 0.5% minimum
+  max_volatility: 0.10   # 10% maximum
+  avoid_major_news: true
+  news_blackout_minutes: 30
+
+# Optimisation
+optimization:
+  use_gpu_optimization: true
+  parallel_inference: true
+  cache_predictions: true
+  cache_ttl_seconds: 300

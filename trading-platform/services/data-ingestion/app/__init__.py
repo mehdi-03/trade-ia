@@ -1,0 +1,1 @@
+# Package app pour le service d'ingestion de données

@@ -1,0 +1,73 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Trading Platform Dashboard",
+    "tags": ["trading", "ai", "monitoring"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Services Health",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up",
+            "legendFormat": "{{job}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "AI Engine Signals Generated",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ai_engine_signals_generated_total[5m])",
+            "legendFormat": "Signals/sec"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Signal Generation Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "ai_engine_signal_generation_duration_seconds",
+            "legendFormat": "Latency (seconds)"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "RabbitMQ Queue Size",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rabbitmq_queue_messages",
+            "legendFormat": "Messages in queue"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  }
+} 

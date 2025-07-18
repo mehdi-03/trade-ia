@@ -1,0 +1,72 @@
+groups:
+  - name: trading_platform_alerts
+    rules:
+      # Alertes pour les services
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.instance }} is down"
+          description: "Service {{ $labels.instance }} has been down for more than 1 minute"
+
+      # Alerte pour l'IA Engine
+      - alert: AIEngineHighLatency
+        expr: ai_engine_signal_generation_duration_seconds > 30
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AI Engine high latency"
+          description: "AI Engine signal generation is taking more than 30 seconds"
+
+      # Alerte pour les signaux générés
+      - alert: NoSignalsGenerated
+        expr: increase(ai_engine_signals_generated_total[5m]) == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No trading signals generated"
+          description: "No trading signals have been generated in the last 5 minutes"
+
+      # Alerte pour la mémoire
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is above 90%"
+
+      # Alerte pour le CPU
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is above 80%"
+
+      # Alerte pour RabbitMQ
+      - alert: RabbitMQQueueFull
+        expr: rabbitmq_queue_messages > 1000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RabbitMQ queue is full"
+          description: "RabbitMQ queue has more than 1000 messages"
+
+      # Alerte pour Redis
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage is above 80%" 

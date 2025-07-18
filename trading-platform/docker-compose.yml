@@ -1,0 +1,220 @@
+version: '3.8'
+
+services:
+  # Base de données principale
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: trading_platform
+      POSTGRES_USER: ${DB_USER:-trading}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-trading123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # TimescaleDB pour séries temporelles
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    environment:
+      POSTGRES_DB: trading_timeseries
+      POSTGRES_USER: ${TSDB_USER:-tsdb}
+      POSTGRES_PASSWORD: ${TSDB_PASSWORD:-tsdb123}
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  # Redis pour cache et sessions
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis123}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+
+  # RabbitMQ pour message queue
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-rabbit}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rabbit123}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  # Service d'ingestion de données
+  data-ingestion:
+    build: ./services/data-ingestion
+    environment:
+      - DB_HOST=postgres
+      - TSDB_HOST=timescaledb
+      - REDIS_HOST=redis
+      - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      - postgres
+      - timescaledb
+      - redis
+      - rabbitmq
+    volumes:
+      - ./services/data-ingestion:/app
+    restart: unless-stopped
+
+  # Moteur DeepSeek
+  deepseek-engine:
+    build: ./services/deepseek-engine
+    environment:
+      - DB_HOST=postgres
+      - TSDB_HOST=timescaledb
+      - REDIS_HOST=redis
+      - RABBITMQ_HOST=rabbitmq
+      - CUDA_VISIBLE_DEVICES=0
+    depends_on:
+      - data-ingestion
+    volumes:
+      - ./services/deepseek-engine:/app
+      - deepseek_models:/models
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+  # Moteur IA (AI Engine)
+  ai-engine:
+    build: ./services/ai-engine
+    environment:
+      - DB_HOST=postgres
+      - TSDB_HOST=timescaledb
+      - REDIS_HOST=redis
+      - RABBITMQ_HOST=rabbitmq
+      - CUDA_VISIBLE_DEVICES=0
+    depends_on:
+      - data-ingestion
+      - deepseek-engine
+    volumes:
+      - ./services/ai-engine:/app
+      - deepseek_models:/models
+    restart: unless-stopped
+    ports:
+      - "8003:8003"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Service d'exécution d'ordres
+  order-executor:
+    build: ./services/order-executor
+    environment:
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+      - RABBITMQ_HOST=rabbitmq
+      - VAULT_ADDR=${VAULT_ADDR:-http://vault:8200}
+    depends_on:
+      - deepseek-engine
+      - vault
+    volumes:
+      - ./services/order-executor:/app
+      - ./connectors:/app/connectors
+    restart: unless-stopped
+
+  # API Gateway
+  api-gateway:
+    build: ./services/api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+      - AUTH_SERVICE_URL=http://auth-service:8001
+    depends_on:
+      - postgres
+      - redis
+      - auth-service
+    volumes:
+      - ./services/api-gateway:/app
+    restart: unless-stopped
+
+  # Service d'authentification
+  auth-service:
+    build: ./services/auth-service
+    environment:
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key}
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./services/auth-service:/app
+    restart: unless-stopped
+
+  # HashiCorp Vault pour les secrets
+  vault:
+    image: hashicorp/vault:1.15
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_TOKEN:-vault-token}
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    ports:
+      - "8200:8200"
+    volumes:
+      - vault_data:/vault/data
+
+  # Prometheus pour métriques
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    volumes:
+      - ./infra/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  # Grafana pour visualisation
+  grafana:
+    image: grafana/grafana:10.2.0
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/monitoring/grafana/dashboards:/etc/grafana/dashboards
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+
+  # Frontend Dashboard
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - api-gateway
+
+volumes:
+  postgres_data:
+  timescale_data:
+  redis_data:
+  rabbitmq_data:
+  vault_data:
+  prometheus_data:
+  grafana_data:
+  deepseek_models:
