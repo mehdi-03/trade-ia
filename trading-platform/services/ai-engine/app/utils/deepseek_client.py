@@ -422,3 +422,33 @@ class DeepSeekClient:
             logger.info("DeepSeek client closed")
         except Exception as e:
             logger.error(f"Error closing client: {e}")
+
+    async def chat(self, prompt: str, context: Optional[str] = None) -> str:
+        """Génère une réponse textuelle à partir du modèle DeepSeek.
+
+        Cette implémentation est simplifiée et sert de démonstration. Elle
+        combine le message utilisateur avec un contexte optionnel (par exemple
+        les dernières news) avant de l'envoyer au modèle. La réponse retournée
+        est simulée tant que l'intégration gRPC complète n'est pas disponible.
+
+        Args:
+            prompt: message de l'utilisateur
+            context: informations de contexte supplémentaires
+
+        Returns:
+            Réponse générée par le modèle
+        """
+        try:
+            if not self.model_loaded:
+                await self.connect()
+
+            full_prompt = prompt
+            if context:
+                full_prompt = f"{context}\n\nUtilisateur: {prompt}"
+
+            # TODO: intégrer l'appel réel au modèle DeepSeek
+            return f"Réponse DeepSeek: {full_prompt[:200]}"
+
+        except Exception as e:
+            logger.error(f"Error during chat: {e}")
+            return "Erreur lors de la génération de la réponse"

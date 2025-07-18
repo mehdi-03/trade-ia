@@ -4,6 +4,10 @@ Routes API pour le service AI Engine.
 
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any
+from pydantic import BaseModel
+import httpx
+
+from app.main import ai_engine
 import structlog
 from app.models.signals import Signal, SignalValidation, RiskParameters
 from app.utils.metrics import signal_generation_counter, signal_validation_counter
@@ -196,4 +200,41 @@ async def regenerate_signals(ticker: str) -> Dict[str, str]:
         
     except Exception as e:
         logger.error(f"Erreur régénération signaux: {e}")
-        raise HTTPException(status_code=500, detail="Erreur de régénération") 
+        raise HTTPException(status_code=500, detail="Erreur de régénération")
+
+
+class ChatRequest(BaseModel):
+    message: str
+
+
+class ChatResponse(BaseModel):
+    response: str
+    news_context: List[str]
+
+
+@router.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest) -> ChatResponse:
+    """Lance une conversation avec DeepSeek en utilisant les dernières news comme contexte."""
+    if not ai_engine or not ai_engine.deepseek_client:
+        raise HTTPException(status_code=503, detail="AI Engine not ready")
+
+    try:
+        news_titles: List[str] = []
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                "http://data-ingestion:8002/api/v1/news",
+                params={"limit": 5}
+            )
+            if resp.status_code == 200:
+                articles = resp.json()
+                news_titles = [a.get("title", "") for a in articles]
+            else:
+                logger.warning(f"News API returned {resp.status_code}")
+
+        context = "\n".join(news_titles)
+        answer = await ai_engine.deepseek_client.chat(request.message, context)
+        return ChatResponse(response=answer, news_context=news_titles)
+
+    except Exception as e:
+        logger.error(f"Erreur chat DeepSeek: {e}")
+        raise HTTPException(status_code=500, detail="Erreur chat")
