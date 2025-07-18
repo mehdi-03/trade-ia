@@ -70,6 +70,7 @@ Une plateforme complète de trading automatisé basée sur l'intelligence artifi
 - **Back-office** : Supervision des bots
 - **API** : REST/WebSocket (FastAPI)
 - **Paiements** : Stripe/Paddle
+- **Chat DeepSeek** : page web minimaliste disponible via l'API Gateway
 
 ### 📊 Monitoring et Alerting
 - **Métriques** : Prometheus + Grafana

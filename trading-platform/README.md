@@ -31,6 +31,9 @@ Une plateforme SaaS complète de trading automatisé utilisant DeepSeek V3 pour 
 - **order-executor** (Port 8002): Exécution d'ordres multi-brokers
 - **api-gateway** (Port 8000): API REST unifiée
 - **auth-service** (Port 8001): Authentification et autorisation
+- **deepseek chat** : Interface conversationnelle utilisant les dernières news
+  pour fournir du contexte aux réponses
+  (accès via `http://localhost:8000/`)
 
 ### Infrastructure
 - **PostgreSQL**: Base de données principale

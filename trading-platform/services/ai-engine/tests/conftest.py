@@ -2,10 +2,15 @@
 Configuration pytest pour les tests du service AI Engine.
 """
 
+import sys
+import os
 import pytest
 import asyncio
-import os
 from unittest.mock import Mock, AsyncMock
+
+# Add service root to PYTHONPATH so "app" package resolves when tests are run
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from app.services.ia_engine import IAEngine
 from app.utils.message_queue import MessageQueue
 from app.utils.database import init_db

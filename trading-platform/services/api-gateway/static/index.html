@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DeepSeek Chat</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2em; }
+        #chat { max-width: 600px; }
+        textarea { width: 100%; height: 100px; }
+        input { width: 100%; margin-bottom: 0.5em; }
+        button { margin-top: 1em; }
+        pre { background: #f4f4f4; padding: 1em; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+<h1>DeepSeek Chat</h1>
+<div id="chat">
+    <input id="token" type="text" placeholder="JWT token">
+    <textarea id="message" placeholder="Votre message"></textarea>
+    <button onclick="sendChat()">Envoyer</button>
+    <pre id="response"></pre>
+</div>
+<script>
+async function sendChat() {
+    const message = document.getElementById('message').value;
+    const token = document.getElementById('token').value;
+    const resp = await fetch('/chat', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+        },
+        body: JSON.stringify({ message })
+    });
+    const out = document.getElementById('response');
+    if (resp.ok) {
+        const data = await resp.json();
+        out.textContent = data.response;
+    } else {
+        out.textContent = 'Erreur: ' + resp.status;
+    }
+}
+</script>
+</body>
+</html>
