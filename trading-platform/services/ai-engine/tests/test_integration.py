@@ -355,4 +355,4 @@ class TestEndToEndPipeline:
         assert message_body["ticker"] == "AAPL"
         assert message_body["signal_type"] == "BUY"
         assert message_body["confidence_score"] == 0.85
-        assert "validation" in message_body 
+        assert "validation" in message_body
