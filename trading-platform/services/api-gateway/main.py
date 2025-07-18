@@ -1,11 +1,14 @@
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import httpx
 import redis
 import jwt
 from prometheus_client import Counter, Histogram, generate_latest, REGISTRY
 import os
+import time
 
 app = FastAPI(title="Trading Platform API Gateway", version="1.0.0")
 
@@ -37,6 +40,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve static files for a simple web UI
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Verify JWT token with auth service"""
@@ -130,6 +136,18 @@ async def get_order(order_id: str, token_data: dict = Depends(verify_token)):
         response = await client.get(f"{ORDER_EXECUTOR_URL}/orders/{order_id}")
         return response.json()
 
+# DeepSeek chat endpoint
+@app.post("/chat")
+async def chat(request: Request, token_data: dict = Depends(verify_token)):
+    """Relay chat messages to the AI engine."""
+    payload = await request.json()
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{AI_ENGINE_URL}/api/v1/chat",
+            json={"message": payload.get("message", "")},
+        )
+        return resp.json()
+
 # Health check
 @app.get("/health")
 async def health_check():
@@ -163,5 +181,5 @@ async def metrics():
 
 if __name__ == "__main__":
     import uvicorn
-    import time
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+

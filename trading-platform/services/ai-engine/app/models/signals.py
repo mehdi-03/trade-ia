@@ -52,7 +52,7 @@ class Signal(Base):
     __tablename__ = "signals"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
     
     # Identifiants
     ticker = Column(String(20), nullable=False, index=True)
@@ -61,7 +61,7 @@ class Signal(Base):
     # Signal
     signal_type = Column(SQLEnum(SignalType), nullable=False)
     signal_strength = Column(SQLEnum(SignalStrength), nullable=False)
-    confidence = Column(Float, nullable=False)  # 0.0 à 1.0
+    confidence_score = Column('confidence', Float, nullable=False)  # 0.0 à 1.0
     
     # Prix et quantités
     entry_price = Column(Float, nullable=False)
@@ -94,7 +94,7 @@ class Signal(Base):
     # Méta
     model_version = Column(String(50))
     model_confidence_scores = Column(JSON)
-    metadata = Column(JSON)
+    extra_metadata = Column('metadata', JSON)
 
 
 # Modèles Pydantic pour l'API
@@ -127,13 +127,13 @@ class SignalRequest(BaseModel):
 class SignalResponse(BaseModel):
     """Réponse avec signal généré."""
     id: str
-    created_at: datetime
+    timestamp: datetime
     ticker: str
     exchange: Optional[str]
     
     signal_type: SignalType
     signal_strength: SignalStrength
-    confidence: float = Field(..., ge=0, le=1)
+    confidence_score: float = Field(..., ge=0, le=1)
     
     entry_price: float
     stop_loss: float
@@ -176,7 +176,7 @@ class SignalPerformance(BaseModel):
     pnl_percent: float
     status: SignalStatus
     
-    created_at: datetime
+    timestamp: datetime
     executed_at: Optional[datetime]
     closed_at: Optional[datetime]
     

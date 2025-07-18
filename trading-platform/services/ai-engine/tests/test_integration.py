@@ -2,11 +2,17 @@
 Tests d'intégration pour le pipeline data-ingestion → ai-engine → signal publishing.
 """
 
+import sys
+import os
 import pytest
 import asyncio
 import json
 from datetime import datetime, timezone
 from unittest.mock import Mock, patch, AsyncMock
+
+# Ensure the service package is discoverable when running tests from repo root
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from app.services.ia_engine import IAEngine
 from app.models.signals import Signal, SignalType, SignalStrength
 from app.utils.message_queue import MessageQueue
